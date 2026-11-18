@@ -1,0 +1,50 @@
+name: Build soar-server
+
+on:
+  workflow_dispatch:
+    inputs:
+      soar_version:
+        description: "getlantern/soar version (must match the client built by build-soar.yml)"
+        default: "v0.2.4"
+      go_version:
+        description: "Go version"
+        default: "1.26.1"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ github.event.inputs.go_version || '1.26.1' }}
+          cache: false
+
+      - name: Build soar-server
+        env:
+          GOTOOLCHAIN: local
+          CGO_ENABLED: "0"
+          GOOS: linux
+          SOAR_VERSION: ${{ github.event.inputs.soar_version || 'v0.2.4' }}
+        run: |
+          mkdir -p out
+          for arch in amd64 arm64; do
+            GOARCH=$arch GOBIN="$PWD/out/$arch" go install -trimpath -ldflags "-s -w" \
+              "github.com/getlantern/soar/cmd/soar-server@${SOAR_VERSION}"
+            cp "out/$arch/soar-server" "out/soar-server-linux-$arch"
+          done
+          file out/soar-server-linux-*
+          sha256sum out/soar-server-linux-*
+          ls -l out/soar-server-linux-*
+
+      - name: Upload to the "assets" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view assets --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create assets --repo "$GITHUB_REPOSITORY" --title "assets" \
+              --notes "Prebuilt binaries used by soar-deploy"
+          gh release upload assets out/soar-server-linux-amd64 out/soar-server-linux-arm64 \
+            --clobber --repo "$GITHUB_REPOSITORY"
