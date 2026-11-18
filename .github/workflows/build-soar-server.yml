@@ -41,6 +41,13 @@ jobs:
           sha256sum out/soar-server-linux-*
           ls -l out/soar-server-linux-*
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: soar-server
+          path: out/soar-server-linux-*
+          if-no-files-found: error
+
       - name: Upload to the "assets" release
         env:
           GH_TOKEN: ${{ github.token }}
