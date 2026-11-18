@@ -31,10 +31,12 @@ jobs:
         run: |
           mkdir -p out
           for arch in amd64 arm64; do
-            GOARCH=$arch GOBIN="$PWD/out/$arch" go install -trimpath -ldflags "-s -w" \
+            GOARCH=$arch go install -trimpath -ldflags "-s -w" \
               "github.com/getlantern/soar/cmd/soar-server@${SOAR_VERSION}"
-            cp "out/$arch/soar-server" "out/soar-server-linux-$arch"
           done
+          BIN="$(go env GOPATH)/bin"
+          cp "$BIN/soar-server" out/soar-server-linux-amd64
+          cp "$BIN/linux_arm64/soar-server" out/soar-server-linux-arm64
           file out/soar-server-linux-*
           sha256sum out/soar-server-linux-*
           ls -l out/soar-server-linux-*
